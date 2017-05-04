@@ -86,61 +86,12 @@ def get_daily_frames(start_date, end_date, keyword):
 
     return frames
 
-def get_weekly_frame(start_date, end_date, keyword):
-
-    if datetime.strptime(start_date, '%Y-%m-%d') > datetime.strptime(end_date, '%Y-%m-%d') - timedelta(days=180):
-        print('No need to stitch; your time interval is short enough. ')
-        return None
-    else:
-        resp_text = get_data(datetime.strptime(start_date, '%Y-%m-%d'), datetime.strptime(end_date, '%Y-%m-%d'), keyword)
-        return parse_csv(get_csv(resp_text))
-
-def stitch_frames(daily_frames, weekly_frame, keywords):
-
-    daily_frame = pd.concat(daily_frames, ignore_index = True)
-
-    daily_frame.columns = ['Date', 'Daily_Volume']
-    pd.to_datetime(daily_frame['Date'])
-    
-    weekly_frame.columns = ['Week_Start_Date', 'Weekly_Volume']
-    daily_frame.index = daily_frame['Date']
-    weekly_frame.index = weekly_frame['Week_Start_Date']
-
-    bins = []
-
-    for i in range(0,len(weekly_frame)):
-        bins.append(pd.date_range(weekly_frame['Week_Start_Date'][i],periods=7,freq='d'))
-
-    final_data = {}
-
-    for i in range(0,len(bins)):
-        week_start_date = datetime.strftime(bins[i][0],'%Y-%m-%d')
-        for j in range(0,len(bins[i])):
-            this_date = datetime.strftime(bins[i][j],'%Y-%m-%d')
-            try:
-                this_val = int(float(weekly_frame['Weekly_Volume'][week_start_date])*float(daily_frame['Daily_Volume'][this_date])/float(daily_frame['Daily_Volume'][week_start_date]))
-                final_data[this_date] = this_val
-            except:
-                pass
-    final_data_frame = DataFrame.from_dict(final_data,orient='index').sort()
-    final_data_frame[0] = np.round(final_data_frame[0]/final_data_frame[0].max()*100,2)
-
-    final_data_frame.columns=['Volume']
-    final_data_frame.index.names = ['Date']
-
-    final_data_frame.to_csv('{0}.csv'.format(keywords.replace('+','')), sep=',')
-
-
-def scrape(keywords, start_date, end_date, category=22, geo=''):
-    #keywords = '+'.join(keywords)
+def scrape(folder_name, keywords, start_date, end_date, category=22, geo='US'):
+    keywords = '+'.join(keywords.split(' '))
     print(start_date, end_date, geo, category, keywords)
-    #start_date = sys.argv[1]
-    #end_date = sys.argv[2]
-    #geo = ''
-    #category = 22
-    #keywords = '+'.join(sys.argv[3:])
-
-    daily_frames = get_daily_frames(start_date, end_date, keywords)
-    weekly_frame = get_weekly_frame(start_date, end_date, keywords)
-
-    return stitch_frames(daily_frames, weekly_frame, keywords)
+  
+    daily_frames = get_daily_frames(start_date, end_date, keywords)     
+    daily_frame = pd.concat(daily_frames, ignore_index = True)
+    daily_frame.to_csv('google_trends/' + folder_name + '/{0}.csv'.format(keywords.replace('+','')), sep=',')
+    
+    return
